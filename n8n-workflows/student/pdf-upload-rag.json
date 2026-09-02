@@ -1,0 +1,273 @@
+{
+  "name": "PDF Upload RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upload-pdf",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        112
+      ],
+      "id": "fad03030-5f88-468c-97b3-ba4a96a3a2e6",
+      "name": "Webhook",
+      "webhookId": "f9ba756b-1702-4209-851f-e3032fcbc8af"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        112
+      ],
+      "id": "92458c3e-b344-444a-9f43-a0cfdb3d7a91",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const textData  = $input.all()[0].json.text || $input.all()[0].json.data || '';\nconst filename  = $('Decode PDF').item.json.filename;\nconst grade     = $('Decode PDF').item.json.grade;\nconst subject   = $('Decode PDF').item.json.subject;\n\nif (!textData || textData.length < 50) {\n  return [{ json: { error: true, message: 'Could not extract text from PDF' } }];\n}\n\n// Split into chunks of 400 words with 50 word overlap\nconst words     = textData.split(/\\s+/).filter(w => w.length > 0);\nconst chunkSize = 400;\nconst overlap   = 50;\nconst chunks    = [];\n\nfor (let i = 0; i < words.length; i += (chunkSize - overlap)) {\n  const chunk = words.slice(i, i + chunkSize).join(' ');\n  if (chunk.length > 100) {\n    chunks.push({\n      content:     chunk,\n      chunk_index: chunks.length,\n      filename:    filename,\n      grade:       grade,\n      subject:     subject,\n      word_count:  chunk.split(/\\s+/).length\n    });\n  }\n}\n\nconsole.log(`Created ${chunks.length} chunks from ${words.length} words`);\n\nreturn chunks.map(c => ({ json: c }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        112
+      ],
+      "id": "1366cc51-9b56-4f70-8641-c04e09935e09",
+      "name": "Chunk Text"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        896,
+        112
+      ],
+      "id": "13f6111c-ffd8-4fc9-9286-e8b016b89c2a",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"success\": true, \"message\": \"PDF processed and added to knowledge base successfully\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1328,
+        -80
+      ],
+      "id": "a3281cda-0c20-4c9b-9764-0aeee1ca3f3f",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all()[0].json.body;\n\nconst base64 = input.pdfBase64;\nconst filename = input.filename;\nconst grade = input.grade;\nconst subject = input.subject;\n\nif (!base64) {\n  return [{\n    json: {\n      error: true,\n      message: 'No PDF data received'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    filename,\n    grade,\n    subject\n  },\n  binary: {\n    data: {\n      data: base64,\n      mimeType: 'application/pdf',\n      fileName: filename\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        112
+      ],
+      "id": "9d6c34bb-b98e-44f1-bd29-faf227a26809",
+      "name": "Decode PDF"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item    = $input.all()[0].json;\nconst content = (item.content || '').trim();\n\nreturn [{\n  json: {\n    content:     content,\n    chunk_index: item.chunk_index,\n    filename:    item.filename,\n    grade:       item.grade,\n    subject:     item.subject\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        112
+      ],
+      "id": "2550dd57-cd89-498c-b382-c4a1f6192dd8",
+      "name": "Build Embedding Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/embed",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ \"model\": \"nomic-embed-text\", \"input\": $json.content }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1328,
+        112
+      ],
+      "id": "645bd8a4-68c3-42fc-aa97-4cb9039a3c0b",
+      "name": "Embedding HTTP"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yvqezjsmizrxpfjirkoz.supabase.co/rest/v1/documents",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2cWV6anNtaXpyeHBmamlya296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2NDc4NjQsImV4cCI6MjEwMzIyMzg2NH0.0mA2jDCR_RaKymMLQDrlDKoP3iF_C0elK1IphUhWdww"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2cWV6anNtaXpyeHBmamlya296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2NDc4NjQsImV4cCI6MjEwMzIyMzg2NH0.0mA2jDCR_RaKymMLQDrlDKoP3iF_C0elK1IphUhWdww"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ content: $('Build Embedding Request').item.json.content, embedding: $json.embeddings[0], filename: $('Build Embedding Request').item.json.filename, grade: $('Build Embedding Request').item.json.grade, subject: $('Build Embedding Request').item.json.subject, chunk_index: $('Build Embedding Request').item.json.chunk_index }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1552,
+        192
+      ],
+      "id": "71561527-c632-49cd-961e-d7682b4d9e8f",
+      "name": "Supabase HTTP"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Decode PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Chunk Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk Text": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Embedding Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decode PDF": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Embedding Request": {
+      "main": [
+        [
+          {
+            "node": "Embedding HTTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding HTTP": {
+      "main": [
+        [
+          {
+            "node": "Supabase HTTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase HTTP": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e3d07c15-dda4-4334-8d1c-d73687eb0bde",
+  "meta": {
+    "instanceId": "0e47e07f04b250b52593bc1d3e1475b3a0a32ea22ce192b79f3b86bd1a696638"
+  },
+  "nodeGroups": [],
+  "id": "NEe1mJPyHG0qGqus",
+  "tags": []
+}

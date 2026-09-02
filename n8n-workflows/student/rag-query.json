@@ -1,0 +1,217 @@
+{
+  "name": "RAG Query",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rag-query",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4bcca19e-8d78-4d27-9cab-55ab202d62f4",
+      "name": "Webhook",
+      "webhookId": "18efcbc2-7b9d-4e05-8e2a-190e6ba36318"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/embeddings",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"model\":\"nomic-embed-text\",\"prompt\":\"{{ $json.body.query }}\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        240,
+        64
+      ],
+      "id": "89fc476e-d2bf-4ae4-b627-7999a30dea36",
+      "name": "OLLAMA REQUEST"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results    = $input.all();\nconst webhook    = $('Webhook').first().json.body;\nconst query      = webhook.query;\nconst mode       = webhook.mode || 'answer';\nconst grade      = webhook.grade || '';\nconst subject    = webhook.subject || '';\nconst studentName = webhook.studentName || 'Student';\n\n// Build context from search results\nlet context = '';\nlet sources  = [];\n\nif (results.length && results[0].json && results[0].json.content) {\n  context = results\n    .filter(r => r.json.similarity > 0.3)\n    .slice(0, 4)\n    .map((r, i) => `[Source ${i+1} - ${r.json.subject} Grade ${r.json.grade}]\\n${r.json.content}`)\n    .join('\\n\\n');\n\n  sources = results\n    .filter(r => r.json.similarity > 0.3)\n    .map(r => r.json.filename)\n    .filter((v, i, a) => a.indexOf(v) === i);\n}\n\nconst hasContext = context.length > 50;\n\nlet prompt = '';\n\nif (mode === 'quiz') {\n  // Quiz generation prompt with curriculum context\n  prompt = hasContext\n    ? `You are generating a quiz for a school student based on their curriculum.\n\nStudent: ${studentName}\nGrade: ${grade}\nSubject: ${subject}\n\nCURRICULUM CONTENT (use this to generate questions):\n${context}\n\nGenerate exactly 5 multiple choice questions based on the curriculum content above.\nReturn ONLY this JSON, nothing else:\n{\n  \"questions\": [\n    {\n      \"q\": \"Question text?\",\n      \"a\": \"Option A\",\n      \"b\": \"Option B\",\n      \"c\": \"Option C\",\n      \"d\": \"Option D\",\n      \"correct\": \"a\"\n    }\n  ]\n}\n\nRules:\n- Base questions directly on the curriculum content provided\n- Make questions appropriate for Grade ${grade}\n- correct field must be lowercase a, b, c, or d\n- Return ONLY the JSON`\n    : `Generate exactly 5 multiple choice questions about ${subject} for Grade ${grade} school student.\nReturn ONLY valid JSON with questions array. Each question needs q, a, b, c, d, correct fields.`;\n\n} else {\n  // Homework help prompt with curriculum context\n  prompt = hasContext\n    ? `You are a helpful tutor. Answer the student's question using their curriculum materials.\n\nStudent: ${studentName}\nQuestion: ${query}\n\nRELEVANT CURRICULUM CONTENT:\n${context}\n\nInstructions:\n- Answer based on the curriculum content above\n- Explain step by step in simple language\n- If maths, show every calculation step\n- Give a real-life example if helpful\n- Keep response under 250 words\n- End with one practice question\n- Sources used: ${sources.join(', ')}`\n    : `You are a helpful tutor. Answer this question step by step for a school student.\nQuestion: ${query}\nKeep response under 200 words. End with one practice question.`;\n}\n\nreturn [{\n  json: {\n    prompt:     prompt,\n    hasContext: hasContext,\n    mode:       mode,\n    sources:    sources,\n    ollamaBody: JSON.stringify({\n      model:   'llama3.2:1b',\n      prompt:  prompt,\n      stream:  false,\n      options: { num_predict: 600, temperature: 0.3 }\n    })\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        64
+      ],
+      "id": "08ac5705-9b2e-4c55-93ae-1420f6cc5e26",
+      "name": "Build RAG Response"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/generate",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.ollamaBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        832,
+        64
+      ],
+      "id": "d1b326dc-f33f-4ca4-9c30-d630af33c789",
+      "name": "Call Ollama"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ollamaData  = $input.all()[0].json;\nconst ragData     = $('Build RAG Response').item.json;\nconst answer      = (ollamaData.response || '').trim();\nconst mode        = ragData.mode;\n\nlet reply = answer;\n\nif (ragData.hasContext && ragData.sources.length) {\n  const sourceNote = `\\n\\n📖 From: ${ragData.sources.join(', ')}`;\n  if (mode !== 'quiz') reply += sourceNote;\n}\n\nreturn [{\n  json: {\n    reply:      reply,\n    hasContext: ragData.hasContext,\n    mode:       mode\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        64
+      ],
+      "id": "2499dd32-a4cf-4919-b39a-cfc8f033fb81",
+      "name": "Build Final Response"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1248,
+        64
+      ],
+      "id": "a8ce334f-5b28-4205-944b-1be23f382468",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yvqezjsmizrxpfjirkoz.supabase.co/rest/v1/rpc/search_documents",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2cWV6anNtaXpyeHBmamlya296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2NDc4NjQsImV4cCI6MjEwMzIyMzg2NH0.0mA2jDCR_RaKymMLQDrlDKoP3iF_C0elK1IphUhWdww"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2cWV6anNtaXpyeHBmamlya296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2NDc4NjQsImV4cCI6MjEwMzIyMzg2NH0.0mA2jDCR_RaKymMLQDrlDKoP3iF_C0elK1IphUhWdww"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ \n  query_embedding: $json.embeddings ? $json.embeddings[0] : $json.embedding, \n  match_grade: $('Webhook').first().json.body.grade \n    ? String($('Webhook').first().json.body.grade).replace('Grade-', '').replace('grade-', '').trim() \n    : null, \n  match_subject: $('Webhook').first().json.body.subject || null, \n  match_count: 5 \n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        64
+      ],
+      "id": "2b9c97d1-a4ca-413b-8894-e3e2844537ba",
+      "name": "Supabase Search"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "OLLAMA REQUEST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OLLAMA REQUEST": {
+      "main": [
+        [
+          {
+            "node": "Supabase Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build RAG Response": {
+      "main": [
+        [
+          {
+            "node": "Call Ollama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Ollama": {
+      "main": [
+        [
+          {
+            "node": "Build Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Final Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Search": {
+      "main": [
+        [
+          {
+            "node": "Build RAG Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "a9b86b7a-3ebe-4178-82fc-3aa2d1f076d1",
+  "meta": {
+    "instanceId": "0e47e07f04b250b52593bc1d3e1475b3a0a32ea22ce192b79f3b86bd1a696638"
+  },
+  "nodeGroups": [],
+  "id": "ghvhnhW2gMKcvWTt",
+  "tags": []
+}

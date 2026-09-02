@@ -1,0 +1,243 @@
+{
+  "name": "Attendance Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -48,
+        16
+      ],
+      "id": "8ef2beb9-c1bd-4f9b-a1dd-d62d2093345c",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Attendance",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        176,
+        -80
+      ],
+      "id": "4f937b81-38f1-4fa5-81df-d84a6b6f7988",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nif (!items.length || !items[0].json.StudentName) {\n  return [{ json: { \n    hasLowAttendance: false,\n    message: 'No attendance records found.'\n  }}];\n}\n\n// Group records by student\nconst students = {};\nitems.forEach(item => {\n  const name = item.json.StudentName;\n  if (!name) return;\n  if (!students[name]) {\n    students[name] = { total: 0, present: 0, absent: 0, late: 0 };\n  }\n  students[name].total++;\n  const status = (item.json.Status || '').toLowerCase();\n  if (status === 'present') students[name].present++;\n  else if (status === 'absent') students[name].absent++;\n  else if (status === 'late')   students[name].late++;\n});\n\n// Calculate percentages\nconst results = [];\nObject.entries(students).forEach(([name, data]) => {\n  const effectivePresent = data.present + (data.late * 0.5);\n  const percentage = data.total > 0 \n    ? Math.round((effectivePresent / data.total) * 100) \n    : 100;\n  \n  results.push({\n    studentName:  name,\n    total:        data.total,\n    present:      data.present,\n    absent:       data.absent,\n    late:         data.late,\n    percentage:   percentage,\n    isBelowLimit: percentage < 75,\n    status:       percentage < 60  ? 'Critical' :\n                  percentage < 75  ? 'Warning'  : 'Good'\n  });\n});\n\n// Only return students below 75%\nconst lowAttendance = results.filter(s => s.isBelowLimit);\n\nif (!lowAttendance.length) {\n  return [{ json: { \n    hasLowAttendance: false,\n    message: 'All students above 75% attendance. No alerts needed.'\n  }}];\n}\n\nreturn lowAttendance.map(s => ({\n  json: { ...s, hasLowAttendance: true }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -80
+      ],
+      "id": "31346df2-d1c2-49ac-81ad-ae3122525c97",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "84e5a088-03d3-4c0d-8d4e-6ccb808d4e9e",
+              "leftValue": "={{ $json.hasLowAttendance }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        -80
+      ],
+      "id": "55e2b2e2-e031-4857-ac1b-92e8f4379db9",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst critical = items.filter(i => i.json.status === 'Critical');\nconst warning  = items.filter(i => i.json.status === 'Warning');\n\nlet message = 'Attendance Alert — ' + new Date().toLocaleDateString('en-GB') + '\\n\\n';\n\nif (critical.length) {\n  message += 'CRITICAL (below 60%):\\n';\n  critical.forEach(i => {\n    message += `• ${i.json.studentName}: ${i.json.percentage}% `;\n    message += `(${i.json.present} present, ${i.json.absent} absent, ${i.json.late} late out of ${i.json.total} days)\\n`;\n  });\n  message += '\\n';\n}\n\nif (warning.length) {\n  message += 'WARNING (60-75%):\\n';\n  warning.forEach(i => {\n    message += `• ${i.json.studentName}: ${i.json.percentage}% `;\n    message += `(${i.json.present} present, ${i.json.absent} absent, ${i.json.late} late out of ${i.json.total} days)\\n`;\n  });\n}\n\nmessage += '\\nPlease follow up with the relevant parents.';\n\nreturn [{ json: { alertMessage: message, count: items.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        -80
+      ],
+      "id": "707ed40a-0d52-4353-b81b-0ebe4b9d0599",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/channels/1533040460518527017/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"content\": {{ JSON.stringify($json.alertMessage) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1072,
+        -80
+      ],
+      "id": "98ffb117-105f-4893-8199-13eec9991503",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -176
+      ],
+      "id": "8f55a502-21ee-41ff-b84d-93bcee4b1d83",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3d6a931c-84ea-4d8f-81d9-d414a2f11ecf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0e47e07f04b250b52593bc1d3e1475b3a0a32ea22ce192b79f3b86bd1a696638"
+  },
+  "nodeGroups": [],
+  "id": "14yaN71EoLr3kFGt",
+  "tags": []
+}

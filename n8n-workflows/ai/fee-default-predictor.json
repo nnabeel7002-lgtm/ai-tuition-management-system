@@ -1,0 +1,412 @@
+{
+  "name": "Fee Default Predictor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtDayOfMonth": 20,
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        -288
+      ],
+      "id": "ae56d57e-4282-4ae6-aa50-33283c3a41af",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 805082606,
+          "mode": "list",
+          "cachedResultName": "Fees",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=805082606"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        -288
+      ],
+      "id": "c6642f88-5519-432e-930b-7995e3609a6a",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nif (!items.length || !items[0].json.StudentName) {\n  return [{ json: { hasData: false } }];\n}\n\n// Group fee records by student\nconst students = {};\nitems.forEach(item => {\n  const name = item.json.StudentName;\n  if (!name) return;\n  if (!students[name]) {\n    students[name] = {\n      studentName: name,\n      studentId:   item.json.StudentID,\n      records:     []\n    };\n  }\n  students[name].records.push({\n    month:       item.json.Month,\n    amountDue:   parseFloat(item.json.AmountDue)  || 0,\n    amountPaid:  parseFloat(item.json.AmountPaid) || 0,\n    status:      item.json.Status || 'Pending',\n    dueDate:     item.json.DueDate,\n    paidDate:    item.json.PaidDate || null\n  });\n});\n\n// Calculate risk score per student\nconst results = [];\nObject.values(students).forEach(student => {\n  const records    = student.records;\n  const total      = records.length;\n  const paid       = records.filter(r => r.status === 'Paid').length;\n  const partial    = records.filter(r => r.status === 'Partial').length;\n  const pending    = records.filter(r => r.status === 'Pending').length;\n  const missing    = records.filter(r => r.status === 'Missing').length;\n\n  // Calculate payment rate\n  const paymentRate = total > 0 ? Math.round((paid / total) * 100) : 100;\n\n  // Check if current month is already paid\n  const now = new Date();\n  const months = ['January','February','March','April','May','June',\n                  'July','August','September','October','November','December'];\n  const currentMonth = months[now.getMonth()] + ' ' + now.getFullYear();\n  const currentRecord = records.find(r => r.month === currentMonth);\n  const alreadyPaid = currentRecord && currentRecord.status === 'Paid';\n\n  if (alreadyPaid) return;\n\n  // Calculate risk score (0-100, higher = more risk)\n  let riskScore = 0;\n  if (paymentRate < 50)  riskScore += 40;\n  else if (paymentRate < 75) riskScore += 25;\n  else if (paymentRate < 90) riskScore += 10;\n\n  if (pending > 1)  riskScore += 20;\n  if (missing > 0)  riskScore += 25;\n  if (partial > 1)  riskScore += 15;\n\n  // Check last 3 months pattern\n  const recent = records.slice(-3);\n  const recentUnpaid = recent.filter(r => r.status !== 'Paid').length;\n  if (recentUnpaid >= 2) riskScore += 20;\n  if (recentUnpaid === 3) riskScore += 15;\n\n  riskScore = Math.min(riskScore, 100);\n\n  const riskLevel = riskScore >= 70 ? 'High' :\n                    riskScore >= 40 ? 'Medium' : 'Low';\n\n  results.push({\n    hasData:        true,\n    studentName:    student.studentName,\n    studentId:      student.studentId,\n    totalMonths:    total,\n    paidMonths:     paid,\n    partialMonths:  partial,\n    pendingMonths:  pending,\n    missingMonths:  missing,\n    paymentRate:    paymentRate,\n    riskScore:      riskScore,\n    riskLevel:      riskLevel,\n    currentMonth:   currentMonth,\n    currentStatus:  currentRecord ? currentRecord.status : 'No record',\n    recentPattern:  recent.map(r => r.status).join(' → '),\n    recordsSummary: JSON.stringify(records.slice(-6))\n  });\n});\n\nif (!results.length) {\n  return [{ json: { hasData: false, message: 'All students have paid this month.' } }];\n}\n\n// Sort by risk score descending\nresults.sort((a, b) => b.riskScore - a.riskScore);\n\nreturn results.map(r => ({ json: r }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -288
+      ],
+      "id": "5f581721-6a39-478b-8202-f8665de1a950",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c5ccb33c-14b5-4625-aaca-13e0b223b64e",
+              "leftValue": "={{ $json.hasData }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        -288
+      ],
+      "id": "4d67766b-bb5d-44ea-906b-bfab4c6c5e66",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        896,
+        -400
+      ],
+      "id": "5f34ee62-f318-4901-8209-fcc03a12c3d9",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "const student = $('Loop Over Items').item.json;\nconst records = JSON.parse(student.recordsSummary);\n\nconst historyText = records.map(r =>\n  `${r.month}: ${r.status} (Due: PKR ${r.amountDue}, Paid: PKR ${r.amountPaid})`\n).join('\\n');\n\nconst prompt = `You are a financial analyst for a tuition center. Based on this student's payment history, write ONE sentence predicting whether they will pay this month's fee on time and why.\n\nStudent: ${student.studentName}\nPayment rate: ${student.paymentRate}%\nRecent pattern: ${student.recentPattern}\nRisk score: ${student.riskScore}/100\nRisk level: ${student.riskLevel}\n\nLast 6 months history:\n${historyText}\n\nWrite exactly ONE sentence. Be direct and specific. No greetings.`;\n\nreturn [{\n  json: {\n    studentName:   student.studentName,\n    riskScore:     student.riskScore,\n    riskLevel:     student.riskLevel,\n    paymentRate:   student.paymentRate,\n    recentPattern: student.recentPattern,\n    currentStatus: student.currentStatus,\n    currentMonth:  student.currentMonth,\n    pendingMonths: student.pendingMonths,\n    missingMonths: student.missingMonths,\n    ollamaBody: JSON.stringify({\n      model:  'llama3.2:1b',\n      prompt: prompt,\n      stream: false\n    })\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -384
+      ],
+      "id": "77e094fc-54f9-4832-abf7-cb857d51c391",
+      "name": "Build Default Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/generate",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.ollamaBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1344,
+        -384
+      ],
+      "id": "3a87467b-804d-4819-816b-243fba14dc30",
+      "name": "OLLAMA REQUEST"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ollamaData  = $input.all()[0].json;\nconst studentData = $('Build Default Prompt').item.json;\nconst aiPrediction = (ollamaData.response || 'Prediction unavailable.').trim();\n\nconst riskEmoji = studentData.riskLevel === 'High'   ? '🔴' :\n                  studentData.riskLevel === 'Medium'  ? '🟡' : '🟢';\n\nconst message = [\n  `${riskEmoji} ${studentData.studentName} — Risk: ${studentData.riskLevel} (${studentData.riskScore}/100)`,\n  `📊 Payment rate: ${studentData.paymentRate}% | Pattern: ${studentData.recentPattern}`,\n  `📅 This month (${studentData.currentMonth}): ${studentData.currentStatus}`,\n  `🤖 ${aiPrediction}`,\n  studentData.riskLevel === 'High'\n    ? `⚡ Action needed: Contact parent immediately.`\n    : studentData.riskLevel === 'Medium'\n    ? `👀 Monitor closely and send reminder.`\n    : `✅ Low risk — standard reminder sufficient.`,\n  '─────────────────────'\n].join('\\n');\n\nreturn [{ json: { message, riskLevel: studentData.riskLevel } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        -384
+      ],
+      "id": "2fe070ef-c91c-4b26-9632-89422ad24226",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/channels/1533040460518527017/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"content\": {{ JSON.stringify('✅ Fee Default Predictor: All students have paid for ' + new Date().toLocaleString('en-US', {month:'long',year:'numeric'}) + '. No action needed.') }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        896,
+        -208
+      ],
+      "id": "1da9366f-cadb-4cef-be76-2adf144ea7fe",
+      "name": "POST TO TUTOR COMMAND"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/channels/1533040460518527017/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"content\": {{ JSON.stringify($json.message) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1792,
+        -352
+      ],
+      "id": "c0108399-26a7-4657-9812-2ee141f36fb1",
+      "name": "POST TO TUTOR COMMAND1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/channels/1533040460518527017/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"content\": {{ JSON.stringify('📋 Fee Default Prediction complete for ' + new Date().toLocaleString('en-US',{month:'long',year:'numeric'}) + '. Students listed above from highest to lowest risk.') }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1120,
+        -576
+      ],
+      "id": "14bc847a-60c1-4dd5-85d8-2a7d738dfc63",
+      "name": "POST TO TUTOR COMMAND2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -480
+      ],
+      "id": "b5f1c43e-2245-4169-a233-06d8f43829ea",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "POST TO TUTOR COMMAND",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "POST TO TUTOR COMMAND2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Default Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Default Prompt": {
+      "main": [
+        [
+          {
+            "node": "OLLAMA REQUEST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OLLAMA REQUEST": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "POST TO TUTOR COMMAND1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST TO TUTOR COMMAND1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e7bd5a4a-9f67-440d-a118-960e82df7c5d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0e47e07f04b250b52593bc1d3e1475b3a0a32ea22ce192b79f3b86bd1a696638"
+  },
+  "nodeGroups": [],
+  "id": "RDvhHo8w6R9Yv73A",
+  "tags": []
+}

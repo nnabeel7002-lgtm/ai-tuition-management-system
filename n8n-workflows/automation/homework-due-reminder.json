@@ -1,0 +1,445 @@
+{
+  "name": "Homework Due Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 21
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -128,
+        -16
+      ],
+      "id": "17fe9ba7-69f4-43de-95f2-b80234c241d4",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1764605639,
+          "mode": "list",
+          "cachedResultName": "Homework",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=1764605639"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        96,
+        -64
+      ],
+      "id": "57dfd4c5-5537-4fd1-85d6-855ca1a07ddb",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nif (!items.length || !items[0].json.HomeworkID) {\n  return [{ json: { hasDue: false } }];\n}\n\nconst tomorrow = new Date();\ntomorrow.setDate(tomorrow.getDate() + 1);\nconst tomorrowStr = tomorrow.toISOString().split('T')[0];\n\nconst dueTomorrow = items.filter(item => {\n  if (!item.json.DueDate) return false;\n  const dueDate = item.json.DueDate.split('T')[0];\n  const status = (item.json.Status || '').toLowerCase();\n  return dueDate === tomorrowStr && status !== 'submitted';\n});\n\nif (!dueTomorrow.length) {\n  return [{ json: { hasDue: false, message: 'No homework due tomorrow.' } }];\n}\n\nreturn dueTomorrow.map(item => ({\n  json: {\n    hasDue:      true,\n    studentName: item.json.StudentName,\n    studentId:   item.json.StudentID,\n    subject:     item.json.Subject,\n    description: item.json.Description,\n    dueDate:     item.json.DueDate.split('T')[0],\n    homeworkId:  item.json.HomeworkID\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -64
+      ],
+      "id": "aac67cc5-5579-4db1-91db-e7b8a931c6db",
+      "name": "Find Due Tomorrow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4a3e8d1c-51d0-429c-ae4a-6d7a2e3569d5",
+              "leftValue": "={{ $json.hasDue }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        544,
+        -64
+      ],
+      "id": "5133f6fa-7381-437e-a652-79863afe4f11",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2007084623,
+          "mode": "list",
+          "cachedResultName": "Students",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=2007084623"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Name",
+              "lookupValue": "={{ $('Loop Over Items').item.json.studentName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1008,
+        0
+      ],
+      "id": "68c6ee5c-5f8b-46d1-bc9a-b2b8b7127bb3",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "121f441f-2da5-4310-81bf-9fbd9c493674",
+              "leftValue": "={{ $json.ParentDiscordID }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1232,
+        0
+      ],
+      "id": "225ecd76-ff25-423c-b449-9c76e6f7a678",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/users/@me/channels",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"recipient_id\": \"{{ $('Get row(s) in sheet1').item.json.ParentDiscordID }}\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1424,
+        -192
+      ],
+      "id": "53410248-5f4f-4985-8063-172f8ae155a1",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/channels/{{ $json.id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"content\": {{ JSON.stringify('📚 Homework Reminder!\\n\\nDear Parent, this is a reminder that ' + $('Find Due Tomorrow').item.json.studentName + ' has ' + $('Find Due Tomorrow').item.json.subject + ' homework due tomorrow.\\n\\nTask: ' + $('Find Due Tomorrow').item.json.description + '\\nDue: ' + $('Find Due Tomorrow').item.json.dueDate + '\\n\\nPlease make sure it is completed tonight.') }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1200,
+        -336
+      ],
+      "id": "61ab3020-56cb-4d77-a72c-89010d4a6563",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/channels/1533040581784375316/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"content\": {{ JSON.stringify('📚 Reminder: ' + $('Find Due Tomorrow').item.json.studentName + ' — ' + $('Find Due Tomorrow').item.json.subject + ' homework is due tomorrow! Task: ' + $('Find Due Tomorrow').item.json.description) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1408,
+        64
+      ],
+      "id": "ea335727-0c0c-4a4c-8c63-20f49bf7340f",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        -208
+      ],
+      "id": "9ce64945-d622-4015-bb4d-035186ef98b7",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        768,
+        -64
+      ],
+      "id": "9c0797fe-ce73-4809-8a36-62a757b356d0",
+      "name": "Loop Over Items"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Find Due Tomorrow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Due Tomorrow": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8917bcf9-4fb7-49c6-83c2-eb5470be59bc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0e47e07f04b250b52593bc1d3e1475b3a0a32ea22ce192b79f3b86bd1a696638"
+  },
+  "nodeGroups": [],
+  "id": "DHKH4vORQv4cU3jM",
+  "tags": []
+}

@@ -1,0 +1,33 @@
+# Secrets — never commit these
+.env
+
+# Dependencies — too large for GitHub
+node_modules/
+
+# Temporary audio files from voice commands
+temp_audio.ogg
+temp_audio.mp3
+temp_audio.wav
+temp_upload.pdf
+
+# Whisper model cache
+D:\whisper-models\
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# n8n local data
+.n8n/
+
+# Windows junk
+Thumbs.db
+desktop.ini
+
+# Mac junk
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*

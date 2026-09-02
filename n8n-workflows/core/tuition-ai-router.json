@@ -1,0 +1,1798 @@
+{
+  "name": "Tuition-AI-Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tuition",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        176
+      ],
+      "id": "695191fe-676d-4421-abc1-7e114ddbfe9e",
+      "name": "Webhook",
+      "webhookId": "c365cb19-c15f-4e85-bc79-1947d6a27bbf"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.intent }}",
+                    "rightValue": "register_student",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "d50e89c0-aad3-4755-ade7-7080ac0f20b4"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "19aa006a-2664-4bb9-8a30-573540dfab5f",
+                    "leftValue": "={{ $json.body.intent }}",
+                    "rightValue": "mark_attendance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "07cc72e4-4b1a-4e5e-88da-5f755a09861b",
+                    "leftValue": "={{ $json.body.intent }}",
+                    "rightValue": "fee_lookup",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2554fe08-51ab-45ba-8343-f092fcab88dd",
+                    "leftValue": "={{ $json.body.intent }}",
+                    "rightValue": "fee_update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "68353e67-79ac-4804-98af-6887441e4699",
+                    "leftValue": "={{ $json.body.intent }}",
+                    "rightValue": "add_homework",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2d191c21-8514-4fc1-9ffa-deb9e8727549",
+                    "leftValue": "={{ $json.body.intent }}",
+                    "rightValue": "list_homework",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "af19c619-57d7-4788-89d1-2ba388baee5b",
+                    "leftValue": "={{ $json.body.intent }}",
+                    "rightValue": "homework_status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "15ca09a7-f5ab-42b8-b88e-3cc37469a004",
+                    "leftValue": "={{ $json.body.intent }}",
+                    "rightValue": "unknown",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        80
+      ],
+      "id": "43616d13-e52c-4e1a-92f3-07820998ecd8",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"reply\": \"Student registered!\\nName: {{ $('Webhook').item.json.body.name }}\\nGrade: {{ $('Webhook').item.json.body.grade }}\\nID: {{ $('Webhook').item.json.body.studentId }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        -592
+      ],
+      "id": "8c6850f5-e206-4b3d-9dda-96fed6892fc6",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 805082606,
+          "mode": "list",
+          "cachedResultName": "Fees",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=805082606"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "StudentID": "={{ $('Webhook').item.json.body.studentId }}",
+            "Status": "Pending",
+            "StudentName": "={{ $('Webhook').item.json.body.firstName }}",
+            "Month": "={{ $('Webhook').item.json.body.currentMonth }}",
+            "AmountDue": "={{ $('Webhook').item.json.body.feeAmount }}",
+            "DueDate": "={{ $('Webhook').item.json.body.dueDate }}",
+            "AmountPaid": "0"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "StudentID",
+              "displayName": "StudentID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "StudentName",
+              "displayName": "StudentName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Month",
+              "displayName": "Month",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AmountDue",
+              "displayName": "AmountDue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AmountPaid",
+              "displayName": "AmountPaid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "DueDate",
+              "displayName": "DueDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "PaidDate",
+              "displayName": "PaidDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        -592
+      ],
+      "id": "87496cb1-0257-4cb4-85af-27ecff5d7842",
+      "name": "Append row in fees",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2007084623,
+          "mode": "list",
+          "cachedResultName": "Students",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=2007084623"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "StudentID": "={{ $json.body.studentId }}",
+            "Name": "={{ $json.body.name }}",
+            "Grade": "={{ $json.body.grade }}",
+            "ParentName": "={{ $json.body.parentName }}",
+            "ParentPhone": "={{ $json.body.parentPhone }}",
+            "FeeAmount": "={{ $json.body.feeAmount }}",
+            "EnrollmentDate": "={{ $json.body.today }}",
+            "Status": "Active"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "StudentID",
+              "displayName": "StudentID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Grade",
+              "displayName": "Grade",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ParentName",
+              "displayName": "ParentName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ParentPhone",
+              "displayName": "ParentPhone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ParentDiscordID",
+              "displayName": "ParentDiscordID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "FeeAmount",
+              "displayName": "FeeAmount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "EnrollmentDate",
+              "displayName": "EnrollmentDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        -592
+      ],
+      "id": "6e6dcd9b-9c9e-4562-8863-4679bdc6d1c5",
+      "name": "Append row in students sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Attendance",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "={{ $json.body.status }}",
+            "Date": "={{ $json.body.today }}",
+            "Notes": "={{ $json.body.notes }}",
+            "StudentName": "={{ $json.body.studentName }}"
+          },
+          "matchingColumns": [
+            "StudentName"
+          ],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "StudentName",
+              "displayName": "StudentName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        -400
+      ],
+      "id": "2246b2f5-1b12-4031-9e72-e63f4d01c0f3",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"reply\": \"Attendance marked: {{ $('Webhook').item.json.body.studentName }} - {{ $('Webhook').item.json.body.status }} on {{ $('Webhook').item.json.body.today }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        -400
+      ],
+      "id": "a5c80b53-83d8-49c1-bdcf-56cfe485bd16",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 805082606,
+          "mode": "list",
+          "cachedResultName": "Fees",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=805082606"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "StudentName",
+              "lookupValue": "={{ $json.body.studentName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        -208
+      ],
+      "id": "045d597b-e275-40a3-a64a-d0f3cb359480",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"reply\": \"Fee info for {{ $json.StudentName }}:\\nMonth: {{ $json.Month }}\\nDue: PKR {{ $json.AmountDue }}\\nPaid: PKR {{ $json.AmountPaid }}\\nStatus: {{ $json.Status }}\\nDue Date: {{ $json.DueDate }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        -208
+      ],
+      "id": "21cf2c9b-ba11-474c-9839-6110b392a9df",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.receipt }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        -16
+      ],
+      "id": "c24f1e13-1316-4d45-a0b5-739481c19e97",
+      "name": "Respond to Webhook3"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"reply\": \"Homework assigned to {{ $json.StudentName }}!\\nSubject: {{ $json.Subject }}\\nTask: {{ $json.Description }}\\nDue: {{ $json.DueDate }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1344,
+        368
+      ],
+      "id": "e4b47940-cdb8-421f-81cc-1be10e1e23ed",
+      "name": "Respond to Webhook4"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"reply\": $json.reply } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        464
+      ],
+      "id": "109e3b0b-79d0-41c7-8892-15851c4f593a",
+      "name": "Respond to Webhook5"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2007084623,
+          "mode": "list",
+          "cachedResultName": "Students",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=2007084623"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Name",
+              "lookupValue": "={{ $json.body.studentName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        272
+      ],
+      "id": "68dbb5c1-b277-417a-9496-dd9e9e4c1fd7",
+      "name": "Get row(s) in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const student = $input.all()[0].json;\nconst ai = $('Switch').item.json.body;\n\nif (!student.StudentID) {\n  return [{ json: { \n    error: true,\n    reply: `Student ${ai.studentName} not found. Register them first.`\n  }}];\n}\n\nconst hwId = 'HW' + Date.now().toString().slice(-4);\n\nconst cleanDate = (d) => {\n  if (!d) return ai.today;\n  return d.split('T')[0];\n};\n\nreturn [{\n  json: {\n    error:        false,\n    homeworkId:   hwId,\n    studentId:    student.StudentID,\n    studentName:  student.Name.split(' ')[0],\n    subject:      ai.subject,\n    description:  ai.description,\n    assignedDate: ai.today,\n    dueDate:      cleanDate(ai.dueDate),\n    status:       'Assigned'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        272
+      ],
+      "id": "ce217e66-d5be-472d-96d1-c2185e2b0e9a",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b03708ce-bdb1-43e5-b62a-5773f6e3bb05",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        272
+      ],
+      "id": "04f847b0-1c54-46c3-8865-d72817cc5959",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1764605639,
+          "mode": "list",
+          "cachedResultName": "Homework",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=1764605639"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "HomeworkID": "={{ $json.homeworkId }}",
+            "Subject": "={{ $json.subject }}",
+            "Description": "={{ $json.description }}",
+            "DueDate": "={{ $json.dueDate }}",
+            "AssignedDate": "={{ $json.assignedDate }}",
+            "StudentName": "={{ $json.studentName }}",
+            "StudentID": "={{ $json.studentId }}"
+          },
+          "matchingColumns": [
+            "StudentName"
+          ],
+          "schema": [
+            {
+              "id": "HomeworkID",
+              "displayName": "HomeworkID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "StudentID",
+              "displayName": "StudentID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "StudentName",
+              "displayName": "StudentName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AssignedDate",
+              "displayName": "AssignedDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "DueDate",
+              "displayName": "DueDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        368
+      ],
+      "id": "c8448f28-1729-4487-88bf-07fbbec3dcdf",
+      "name": "Append row in homework",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1764605639,
+          "mode": "list",
+          "cachedResultName": "Homework",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=1764605639"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "StudentName",
+              "lookupValue": "={{ $json.body.studentName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        464
+      ],
+      "id": "a7765c59-e000-41ff-875a-4bc631e5fd0a",
+      "name": "Get row(s) from homework",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"reply\": \"Homework status updated for {{ $('Webhook').item.json.body.studentName }} - {{ $('Webhook').item.json.body.status }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        656
+      ],
+      "id": "c9e1bf48-8b2c-4d28-8387-82fbc6098a1c",
+      "name": "Respond to Webhook6"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 805082606,
+          "mode": "list",
+          "cachedResultName": "Fees",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=805082606"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "AmountPaid": "={{ $('Webhook').item.json.body.mode === 'paid' ?$json.AmountDue : $json.AmountPaid }}",
+            "Status": "={{ $('Webhook').item.json.body.mode === 'paid' ? 'Paid' : 'Partial' }}",
+            "PaidDate": "={{ $('Webhook').item.json.body.today }}",
+            "StudentName": "={{ $('Webhook').item.json.body.studentName }}",
+            "row_number": "={{ $json.row_number }}",
+            "Transaction ID": "={{ $json.body.TransactionId || '' }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "StudentID",
+              "displayName": "StudentID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "StudentName",
+              "displayName": "StudentName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Month",
+              "displayName": "Month",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "AmountDue",
+              "displayName": "AmountDue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "AmountPaid",
+              "displayName": "AmountPaid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "DueDate",
+              "displayName": "DueDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "PaidDate",
+              "displayName": "PaidDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Transaction ID",
+              "displayName": "Transaction ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        -16
+      ],
+      "id": "54924de2-669f-4220-9f72-356dd6a7a849",
+      "name": "Update row in fees",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1764605639,
+          "mode": "list",
+          "cachedResultName": "Homework",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=1764605639"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "={{ $json.body.status }}",
+            "StudentName": "={{ $json.body.studentName }}"
+          },
+          "matchingColumns": [
+            "StudentName"
+          ],
+          "schema": [
+            {
+              "id": "HomeworkID",
+              "displayName": "HomeworkID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "StudentID",
+              "displayName": "StudentID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "StudentName",
+              "displayName": "StudentName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "AssignedDate",
+              "displayName": "AssignedDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "DueDate",
+              "displayName": "DueDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        656
+      ],
+      "id": "8f705f53-a119-4741-b45a-0f82e56112c8",
+      "name": "Update row in homework",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"reply\": \"I didn't understand that. You can say things like:\\n\\n• Add student Ali, class 8, father Ahmed, 0300-1234567, fees 5000\\n• Mark Ali as absent today\\n• What is Ali's fee balance?\\n• Ali paid his fees\\n• Assign Ali maths homework, solve exercise 5, due Friday\\n• Show Ali's homework\\n• Mark Ali's maths homework as submitted\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        848
+      ],
+      "id": "deec5141-6e16-4509-81f7-1fbf06581ae2",
+      "name": "Respond to Webhook7"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"reply\": \"{{ $json.reply }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        176
+      ],
+      "id": "bc17a08d-697f-4de5-8501-adce7b48829f",
+      "name": "Respond to Webhook8"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst studentName = $('Switch').item.json.body.studentName;\n\nif (!items.length || !items[0].json.StudentName) {\n  return [{ json: { reply: `No homework found for ${studentName}.` } }];\n}\n\nconst list = items.map(item => {\n  const date = item.json.DueDate ? item.json.DueDate.split('T')[0] : 'No date';\n  return `${item.json.Subject}: ${item.json.Description} (Due: ${date}) - ${item.json.Status || 'Assigned'}`;\n}).join('\\n');\n\nreturn [{ json: { reply: `Homework for ${items[0].json.StudentName}:\\n${list}` } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        464
+      ],
+      "id": "55af3bcb-4142-4f9d-8a8b-a51d8b72441a",
+      "name": "Build List Reply"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 805082606,
+          "mode": "list",
+          "cachedResultName": "Fees",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=805082606"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "StudentName",
+              "lookupValue": "={{ $json.body.studentName }}"
+            },
+            {
+              "lookupColumn": "Month",
+              "lookupValue": "={{ $json.body.currentMonth }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        -16
+      ],
+      "id": "31905148-6363-47eb-8775-0dab5dbd471c",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhook = $('Webhook').first().json.body;\n\n// Get fee data from the Get Fees node we added before Update\nconst feeData = $('Get row(s) in sheet1').first().json;\n\nconst now       = new Date();\nconst receiptNo = 'RCP' + Date.now().toString().slice(-6);\n\nconst amountDue  = feeData.AmountDue  || 'N/A';\nconst amountPaid = webhook.mode === 'paid'\n  ? amountDue\n  : (webhook.amountPaid || 'N/A');\n\nconst month = feeData.Month || webhook.currentMonth || '';\n\nconst receipt = [\n  '━━━━━━━━━━━━━━━━━━━━━━━',\n  '      PAYMENT RECEIPT',\n  '━━━━━━━━━━━━━━━━━━━━━━━',\n  `Receipt No:    ${receiptNo}`,\n  `Date:          ${now.toLocaleDateString('en-GB')}`,\n  `Time:          ${now.toLocaleTimeString('en-GB')}`,\n  '───────────────────────',\n  `Student:       ${webhook.studentName}`,\n  `Month:         ${month}`,\n  `Amount Due:    PKR ${amountDue}`,\n  `Amount Paid:   PKR ${amountPaid}`,\n  `Status:        ${webhook.mode === 'paid' ? 'PAID IN FULL' : 'PARTIAL PAYMENT'}`,\n  webhook.transactionId\n    ? `Transaction:   ${webhook.transactionId}`\n    : '',\n  '───────────────────────',\n  'Payment Method: JazzCash',\n  '━━━━━━━━━━━━━━━━━━━━━━━',\n  'Thank you for your payment!'\n].filter(Boolean).join('\\n');\n\nreturn [{\n  json: {\n    receipt:         receipt,\n    studentName:     webhook.studentName,\n    parentDiscordId: feeData.ParentDiscordID || ''\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        -16
+      ],
+      "id": "20303f9c-1e11-4103-94ea-0e44340e61c8",
+      "name": "Build Receipt"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9847b8d4-c703-468f-be21-28214ec1dab9",
+              "leftValue": "={{ $json.ParentDiscordID }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        -16
+      ],
+      "id": "36ddc385-38ce-4788-be60-0c9e1dd5ac81",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2007084623,
+          "mode": "list",
+          "cachedResultName": "Students",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=2007084623"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "StudentID",
+              "lookupValue": "={{ $('Get row(s) in sheet1').item.json.StudentID }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        -16
+      ],
+      "id": "422b0ae7-b918-4c25-861c-df68a6ba1bd0",
+      "name": "Get row(s) in sheet3",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/users/@me/channels",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"recipient_id\": \"{{ $json.ParentDiscordID }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1792,
+        -16
+      ],
+      "id": "7c8e156e-f40d-4a87-8caf-e6cdce8ee5c0",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://discord.com/api/v10/channels/{{ $json.id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({  content: $('Build Receipt').item.json.receipt}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2016,
+        -16
+      ],
+      "id": "027e0d95-64c3-4ca3-8cd3-82df0641c7ac",
+      "name": "HTTP Request1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in fees": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Append row in students sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) from homework",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in homework",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in students sheet": {
+      "main": [
+        [
+          {
+            "node": "Append row in fees",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook8",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in homework",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in homework": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) from homework": {
+      "main": [
+        [
+          {
+            "node": "Build List Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in fees": {
+      "main": [
+        [
+          {
+            "node": "Build Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in homework": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build List Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Update row in fees",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Receipt": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook3": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet3": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2050a612-dccc-4e02-905f-500c691f3b3b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0e47e07f04b250b52593bc1d3e1475b3a0a32ea22ce192b79f3b86bd1a696638"
+  },
+  "nodeGroups": [],
+  "id": "datoBiANvtL4hqWm",
+  "tags": []
+}

@@ -1,0 +1,117 @@
+{
+  "name": "Student AI Tutor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "student-tutor",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bec8181b-9db4-428c-b5b8-87b0665153e7",
+      "name": "Webhook",
+      "webhookId": "ccfdcc08-7f62-42f6-ac60-93854a181b90"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.reply }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        624,
+        0
+      ],
+      "id": "70693cad-1691-4700-a006-ee4405ef9c27",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all()[0].json.body;\nconst lower = (input.content || '').toLowerCase();\n\nconst subjects = ['maths','math','english','science','physics',\n                  'chemistry','biology','history','geography',\n                  'urdu','computer','islamiat'];\nlet subject = '';\nfor (const s of subjects) {\n  if (lower.includes(s)) { subject = s; break; }\n}\n\nreturn [{\n  json: {\n    query:       input.content,\n    mode:        'answer',\n    studentName: input.authorName || 'Student',\n    subject:     subject,\n    grade:       ''\n  }\n}]; "
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "418f737c-41c9-417c-b35d-cdebf5d185db",
+      "name": "Prepare RAG Query"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/rag-query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        432,
+        0
+      ],
+      "id": "9f06dfee-d712-470a-9ba6-a4d659e8c4f7",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare RAG Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare RAG Query": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "209bf70b-aed5-4a55-86ef-7b840f582f54",
+  "meta": {
+    "instanceId": "0e47e07f04b250b52593bc1d3e1475b3a0a32ea22ce192b79f3b86bd1a696638"
+  },
+  "nodeGroups": [],
+  "id": "8jP8V7sXatM4C6EO",
+  "tags": []
+}

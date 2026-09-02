@@ -1,0 +1,651 @@
+{
+  "name": "Quiz Grader",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "quiz-answer",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        48
+      ],
+      "id": "12cae660-0eb8-411c-8114-f9c83c04f7a3",
+      "name": "Webhook",
+      "webhookId": "896c2481-cc0d-4171-9ca5-66383ee1131e"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input       = $input.all()[0].json.body;\nconst rawAnswer   = (input.content || '').trim().toUpperCase();\nconst studentName = input.studentName || input.authorName || 'unknown';\nconst quizId      = input.quizId || null;\nconst isDM        = input.isDM || false;\n\nlet answers = [];\nif (rawAnswer.includes(',')) {\n  answers = rawAnswer.split(',').map(a => a.trim());\n} else if (rawAnswer.includes(' ')) {\n  answers = rawAnswer.split(/\\s+/).map(a => a.trim());\n} else {\n  answers = rawAnswer.split('').filter(c => /[ABCD]/.test(c));\n}\nanswers = answers.filter(a => /^[ABCD]$/.test(a));\n\nif (!answers.length) {\n  return [{ json: {\n    error:       true,\n    reply:       `Please answer with letters only. Example: A B C D A`,\n    studentName: studentName\n  }}];\n}\n\nreturn [{\n  json: {\n    error:        false,\n    studentName:  studentName,\n    rawAnswers:   answers.join(',').toLowerCase(),\n    answerCount:  answers.length,\n    quizId:       quizId,\n    isDM:         isDM\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        48
+      ],
+      "id": "3996179c-0e4d-45f7-8d14-2bf095cb6da1",
+      "name": "Parse Answer"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "399402bd-d5bb-49a9-98a5-73453e7db142",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        48
+      ],
+      "id": "03a929bf-651d-4d62-8788-de032878ef4c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={ \"reply\": \"{{ $json.reply }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        144
+      ],
+      "id": "3fdd487a-6526-4a57-a151-37d7a56f6875",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2136453529,
+          "mode": "list",
+          "cachedResultName": "Quizzes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=2136453529"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "QuizID",
+              "lookupValue": "={{ $('Parse Answer').item.json.quizId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        -144
+      ],
+      "id": "877b5287-4d79-418e-8cad-c0a8188e5e65",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items       = $input.all();\nconst answerData  = $('Parse Answer').item.json;\n\n// Find the most recent active quiz\nconst activeQuizzes = items.filter(i => i.json.Status === 'Active');\n\nif (!activeQuizzes.length) {\n  return [{ json: {\n    error:  true,\n    reply:  `${answerData.studentName}, no active quiz found. Ask your tutor to generate one.`\n  }}];\n}\n\nconst quiz          = activeQuizzes[activeQuizzes.length - 1].json;\nconst correctArr    = quiz.CorrectAnswers.split(',').map(a => a.trim().toLowerCase());\nconst studentArr    = answerData.rawAnswers.split(',').map(a => a.trim().toLowerCase());\nconst questionCount = correctArr.length;\n\nif (studentArr.length !== questionCount) {\n  return [{ json: {\n    error:  true,\n    reply:  `${answerData.studentName}, this quiz has ${questionCount} questions but you gave ${studentArr.length} answers. Please try again with ${questionCount} answers.`\n  }}];\n}\n\n// Grade each answer\nlet correct = 0;\nconst breakdown = [];\nlet questions = [];\ntry { questions = JSON.parse(quiz.Questions); } catch(e) {}\n\ncorrectArr.forEach((correct_ans, i) => {\n  const student_ans = studentArr[i];\n  const isCorrect   = student_ans === correct_ans;\n  if (isCorrect) correct++;\n\n  const q = questions[i] || {};\n  breakdown.push({\n    num:     i + 1,\n    correct: isCorrect,\n    yours:   student_ans.toUpperCase(),\n    answer:  correct_ans.toUpperCase(),\n    question: q.q || `Q${i + 1}`\n  });\n});\n\nconst score      = Math.round((correct / questionCount) * 100);\nconst grade      = score >= 90 ? 'A' : score >= 80 ? 'B' : score >= 70 ? 'C' : score >= 60 ? 'D' : 'F';\nconst emoji      = score >= 75 ? '🎉' : score >= 50 ? '👍' : '📚';\nconst feedback   = score >= 90 ? 'Excellent work!' : score >= 75 ? 'Good job, keep it up!' : score >= 50 ? 'Not bad, but review the missed questions.' : 'Needs more practice. Review the material and try again.';\n\nlet resultMsg = `${emoji} Quiz Results for ${answerData.studentName}\\n`;\nresultMsg    += `Subject: ${quiz.Subject} | Score: ${correct}/${questionCount} (${score}%) | Grade: ${grade}\\n`;\nresultMsg    += '─────────────────────\\n';\n\nbreakdown.forEach(b => {\n  const icon = b.correct ? '✅' : '❌';\n  resultMsg += `${icon} Q${b.num}: You answered ${b.yours}`;\n  if (!b.correct) resultMsg += ` (correct: ${b.answer})`;\n  resultMsg += '\\n';\n});\n\nresultMsg += `─────────────────────\\n${feedback}`;\n\nreturn [{\n  json: {\n    error:          false,\n    quizId:         quiz.QuizID,\n    studentName:    answerData.studentName,\n    subject:        quiz.Subject,\n    score:          score,\n    correct:        correct,\n    questionCount:  questionCount,\n    grade:          grade,\n    studentAnswers: answerData.rawAnswers,\n    resultMsg:      resultMsg\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        -48
+      ],
+      "id": "6cf0b624-da20-4c0f-8c84-49153bc2edf6",
+      "name": "Grade Quiz"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fd7c3edb-9cf2-4c1a-89b0-4ebc5c900a0e",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        -48
+      ],
+      "id": "99f7c36b-1de2-4683-889e-3e3e122d7e77",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2136453529,
+          "mode": "list",
+          "cachedResultName": "Quizzes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=2136453529"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "QuizID": "={{ $json.quizId }}",
+            "StudentAnswers": "={{ $json.studentAnswers }}",
+            "Score": "={{ $json.score }}",
+            "Status": "Completed"
+          },
+          "matchingColumns": [
+            "QuizID"
+          ],
+          "schema": [
+            {
+              "id": "QuizID",
+              "displayName": "QuizID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "StudentName",
+              "displayName": "StudentName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Questions",
+              "displayName": "Questions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "CorrectAnswers",
+              "displayName": "CorrectAnswers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "StudentAnswers",
+              "displayName": "StudentAnswers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CreatedAt",
+              "displayName": "CreatedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1792,
+        -144
+      ],
+      "id": "4d880290-8dbf-4ab5-85e1-67bb23721ffc",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/channels/1533040616450297926/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"content\": {{ JSON.stringify($('Grade Quiz').item.json.resultMsg) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2016,
+        -144
+      ],
+      "id": "03f59e19-c48e-4e99-8d08-4836d3c874f4",
+      "name": "POST TO QUIZZES"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={ \"reply\": \"{{ $json.reply }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1792,
+        48
+      ],
+      "id": "769111f3-4d9b-4e3a-b673-4dfd01cbda9d",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.reply }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2448,
+        -144
+      ],
+      "id": "8f650524-6f88-4b57-a200-ed73c2c13b44",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7b0ee819-3a77-4bcd-9d25-f0e730a1c3ba",
+              "leftValue": "={{ $json.quizId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        -48
+      ],
+      "id": "dc13e5aa-3350-42f6-9753-1d4567d4637c",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2136453529,
+          "mode": "list",
+          "cachedResultName": "Quizzes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=2136453529"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "StudentName",
+              "lookupValue": "={{ $('Parse Answer').item.json.studentName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        48
+      ],
+      "id": "dd86f986-dc2e-4b45-864a-2316a75133a0",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1120,
+        -48
+      ],
+      "id": "ed0f3b53-9f1d-479b-b7eb-b67ed26e1e37",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const grade = $('Grade Quiz').item.json;\n\nreturn [{\n  json: {\n    reply:     grade.resultMsg,\n    completed: true\n  }\n}];;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        -144
+      ],
+      "id": "178a5dae-f267-4cd2-81b9-dd05419b0dd8",
+      "name": "Build Grade Response"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Answer": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grade Quiz": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "POST TO QUIZZES",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST TO QUIZZES": {
+      "main": [
+        [
+          {
+            "node": "Build Grade Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Grade Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Grade Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0f9a9b01-ffce-4c83-b417-2d8af83e5430",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0e47e07f04b250b52593bc1d3e1475b3a0a32ea22ce192b79f3b86bd1a696638"
+  },
+  "nodeGroups": [],
+  "id": "xxo7skdYfactFPke",
+  "tags": []
+}

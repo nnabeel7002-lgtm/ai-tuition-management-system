@@ -1,0 +1,570 @@
+{
+  "name": "Monthly Fee Creation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        -48
+      ],
+      "id": "b9dc4543-a293-46d3-9210-d99e7c4a138a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2007084623,
+          "mode": "list",
+          "cachedResultName": "Students",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=2007084623"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Active"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        -128
+      ],
+      "id": "4b8afc3c-2d4e-4344-99cc-e7bbc3b6316b",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -240
+      ],
+      "id": "4e250826-3662-4676-953d-bbb62837670e",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (!items.length || !items[0].json.StudentID) {\n  return [{ json: { hasStudents: false } }];\n}\n\nreturn items.map(item => {\n  const student = item.json;\n\n  const now = new Date();\n\n  const months = [\n    'January', 'February', 'March', 'April',\n    'May', 'June', 'July', 'August',\n    'September', 'October', 'November', 'December'\n  ];\n\n  const currentMonth =\n    months[now.getMonth()] + ' ' + now.getFullYear();\n\n  const lastDay =\n    new Date(now.getFullYear(), now.getMonth() + 1, 0);\n\n  const dueDate =\n    lastDay.toISOString().split('T')[0];\n\n  return {\n    json: {\n      hasStudents: true,\n      StudentID: student.StudentID,\n      StudentName: student.Name,\n      FeeAmount: parseFloat(student.FeeAmount) || 0,\n      Month: currentMonth,\n      DueDate: dueDate,\n      AmountPaid: 0,\n      Status: 'Pending'\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        -128
+      ],
+      "id": "6c296324-dfc2-4b8b-bc19-c71963db264e",
+      "name": "Build Fee Records"
+    },
+    {
+      "parameters": {
+        "jsCode": "const student = $('Build Fee Records').item.json;\nconst results = $input.all();\n\nconst alreadyExists = results.some(item =>\n  item.json.StudentID &&\n  item.json.Month\n);\n\nif (alreadyExists) {\n  return [{\n    json: {\n      skip: true,\n      studentId: student.StudentId,\n      studentName: student.StudentName,\n      currentMonth: student.Month,\n      reason: `Fee for ${student.StudentName} for ${student.Month} already exists`\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    skip: false,\n    studentId: student.StudentId,\n    studentName: student.StudentName,\n    feeAmount: student.FeeAmount,\n    currentMonth: student.Month,\n    dueDate: student.DueDate,\n    amountPaid: 0,\n    status: 'Pending'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        -336
+      ],
+      "id": "7c965953-00c3-49f6-8530-9f074111d2ae",
+      "name": "Skip If Exists"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "96b2b656-3b15-485b-923b-90d099c46a8e",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        -128
+      ],
+      "id": "56c5de01-b179-4ae4-9e33-ef9e40510ee2",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 805082606,
+          "mode": "list",
+          "cachedResultName": "Fees",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=805082606"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "StudentID": "={{ $('check existing fee').item.json.StudentID }}",
+            "StudentName": "={{ $json.studentName }}",
+            "Month": "={{ $('If (has students)').item.json.Month }}",
+            "AmountDue": "={{ $json.feeAmount }}",
+            "AmountPaid": "={{ $json.amountPaid }}",
+            "DueDate": "={{ $('If (has students)').item.json.DueDate }}",
+            "Status": "={{ $json.status }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "StudentID",
+              "displayName": "StudentID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "StudentName",
+              "displayName": "StudentName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Month",
+              "displayName": "Month",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AmountDue",
+              "displayName": "AmountDue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AmountPaid",
+              "displayName": "AmountPaid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DueDate",
+              "displayName": "DueDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PaidDate",
+              "displayName": "PaidDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1792,
+        -128
+      ],
+      "id": "754f4171-c3df-4803-a25d-7fa66c5395f8",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/channels/1533040460518527017/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"content\": {{ JSON.stringify('✅ Fee record created for ' + $json.studentName + ' — ' + $json.currentMonth + ' — PKR ' + $json.feeAmount) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1824,
+        192
+      ],
+      "id": "670bf45f-0c19-43ca-93ce-b4e94355c8c7",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e6469471-2619-4462-b339-a8d92e630273",
+              "leftValue": "={{ $json.hasStudents }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        -128
+      ],
+      "id": "8f1f7cc6-bab2-46aa-a120-090022b032c8",
+      "name": "If (has students)"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 805082606,
+          "mode": "list",
+          "cachedResultName": "Fees",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=805082606"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "StudentID",
+              "lookupValue": "={{ $json.StudentID }}"
+            },
+            {
+              "lookupColumn": "Month",
+              "lookupValue": "={{ $json.Month }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        -128
+      ],
+      "id": "950a537b-d3d6-4eba-a054-1b1fc233ffd5",
+      "name": "check existing fee",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/channels/1533040460518527017/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"content\": {{ JSON.stringify('📋 Monthly fee creation complete for ' + new Date().toLocaleString('en-US', {month:'long',year:'numeric'})) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        -320
+      ],
+      "id": "f6c84359-2370-4585-9af0-0357bf0bbf5c",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        464,
+        -112
+      ],
+      "id": "2575eea5-4572-4196-b596-0b2f1a9b8fbd",
+      "name": "Loop Over Items"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Fee Records": {
+      "main": [
+        [
+          {
+            "node": "If (has students)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip If Exists": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If (has students)": {
+      "main": [
+        [
+          {
+            "node": "check existing fee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check existing fee": {
+      "main": [
+        [
+          {
+            "node": "Skip If Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Fee Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "dd4620e7-1c7b-4fdb-9b77-168c2972e0ab",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0e47e07f04b250b52593bc1d3e1475b3a0a32ea22ce192b79f3b86bd1a696638"
+  },
+  "nodeGroups": [],
+  "id": "9zzYcbAUu3Exb7xz",
+  "tags": []
+}

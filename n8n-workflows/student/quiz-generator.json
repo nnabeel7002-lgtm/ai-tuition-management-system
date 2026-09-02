@@ -1,0 +1,459 @@
+{
+  "name": "Quiz Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "quiz-generator",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2cdeb84c-f1bf-411e-b441-bb2327f33348",
+      "name": "Webhook",
+      "webhookId": "bc8a4cfc-cf62-482e-a689-26d6f80844b2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ollamaData = $input.all()[0].json;\nconst promptData = $('Prepare Quiz RAG').item.json;\nlet raw = ollamaData.response || '';\n\nlet questions = [];\ntry {\n  let cleaned = raw\n    .replace(/```json/gi, '')\n    .replace(/```/g, '')\n    .trim();\n\n  // Fix common truncation — Ollama often cuts off before closing brackets\n  if (cleaned.startsWith('{')) {\n    // Count open vs close braces\n    let openBraces    = (cleaned.match(/\\{/g) || []).length;\n    let closeBraces   = (cleaned.match(/\\}/g) || []).length;\n    let openBrackets  = (cleaned.match(/\\[/g) || []).length;\n    let closeBrackets = (cleaned.match(/\\]/g) || []).length;\n\n    // Add missing closing brackets first, then braces\n    const missingBrackets = openBrackets - closeBrackets;\n    const missingBraces   = openBraces   - closeBraces;\n\n    if (missingBrackets > 0) cleaned += ']'.repeat(missingBrackets);\n    if (missingBraces   > 0) cleaned += '}'.repeat(missingBraces);\n  }\n\n  const parsed = JSON.parse(cleaned);\n  questions    = parsed.questions || [];\n\n} catch(e) {\n  // Last resort — extract individual question objects with regex\n  try {\n    const questionMatches = raw.match(/\\{[^{}]*\"q\"[^{}]*\"correct\"[^{}]*\\}/g) || [];\n    questions = questionMatches.map(q => {\n      try { return JSON.parse(q); } catch(e2) { return null; }\n    }).filter(Boolean);\n  } catch(e3) {\n    return [{ json: {\n      error:       true,\n      reply:       'Could not generate quiz. Please try again.',\n      parseError:  e.message,\n      rawResponse: raw.slice(0, 200)\n    }}];\n  }\n}\n\nif (!questions.length || questions.length < 3) {\n  return [{ json: {\n    error:         true,\n    reply:         'Quiz generation incomplete. Please try again.',\n    questionCount: questions.length\n  }}];\n}\n\nquestions = questions.slice(0, 5);\n\n// Validate each question has required fields\nquestions = questions.filter(q => q.q && q.a && q.b && q.c && q.d && q.correct);\n\nif (questions.length < 3) {\n  return [{ json: {\n    error: true,\n    reply: 'Generated questions were incomplete. Please try again.'\n  }}];\n}\n\nlet discordMsg  = `📝 Practice Quiz — ${promptData.subject}\\n`;\ndiscordMsg     += `Quiz ID: ${promptData.quizId}\\n`;\ndiscordMsg     += '─────────────────────\\n\\n';\n\nquestions.forEach((q, i) => {\n  discordMsg += `Q${i + 1}: ${q.q}\\n`;\n  discordMsg += `A) ${q.a}   B) ${q.b}\\n`;\n  discordMsg += `C) ${q.c}   D) ${q.d}\\n\\n`;\n});\n\ndiscordMsg += '─────────────────────\\n';\ndiscordMsg += `${promptData.studentName}, reply with your answers like:\\nA B C D A`;\n\nconst correctAnswers = questions.map(q => q.correct.toLowerCase()).join(',');\nconst questionsJson  = JSON.stringify(questions);\n\nreturn [{\n  json: {\n    error:          false,\n    quizId:         promptData.quizId,\n    studentName:    promptData.studentName,\n    subject:        promptData.subject,\n    discordMsg:     discordMsg,\n    questionsJson:  questionsJson,\n    correctAnswers: correctAnswers,\n    questionCount:  questions.length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        -112
+      ],
+      "id": "814dd104-6726-4056-b955-207651a576b4",
+      "name": "Parse Quiz"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8deb30bc-adcc-4d34-9e72-e2dc70ea9809",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1440,
+        -112
+      ],
+      "id": "54e4bf50-5229-4824-824a-02a27c2c95f6",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={ \"reply\": \"{{ $json.reply }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1632,
+        -32
+      ],
+      "id": "05fbdbbe-ce5e-4428-83c1-3e884a706da9",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2136453529,
+          "mode": "list",
+          "cachedResultName": "Quizzes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=2136453529"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "QuizID": "={{ $json.quizId }}",
+            "StudentName": "={{ $json.studentName }}",
+            "Subject": "={{ $json.subject }}",
+            "Questions": "={{ $json.questionsJson }}",
+            "CorrectAnswers": "={{ $json.correctAnswers }}",
+            "Status": "Active",
+            "CreatedAt": "={{ $now}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "QuizID",
+              "displayName": "QuizID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "StudentName",
+              "displayName": "StudentName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Questions",
+              "displayName": "Questions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CorrectAnswers",
+              "displayName": "CorrectAnswers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "StudentAnswers",
+              "displayName": "StudentAnswers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CreatedAt",
+              "displayName": "CreatedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1648,
+        -208
+      ],
+      "id": "7c318075-e67d-4ca6-b561-e49973d2f4f4",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2080,
+        -208
+      ],
+      "id": "9c95257d-7afd-4c74-a348-cd4ac1192b7e",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const quiz = $('Parse Quiz').item.json;\n\nif (quiz.error) {\n  return [{ json: { reply: quiz.reply, quizId: null, questions: null } }];\n}\n\nreturn [{\n  json: {\n    quizId:    quiz.quizId,\n    questions: quiz.discordMsg,\n    subject:   quiz.subject\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        -208
+      ],
+      "id": "cf43716b-555d-4741-82a4-5ea110526091",
+      "name": "Build Quiz Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const student = $('Verify Student').first().json;\nconst webhook = $('Webhook').first().json.body;\n\nconst quizId = 'QZ' + Date.now().toString().slice(-6);\n\nreturn [{\n  json: {\n    quizId:      quizId,\n    studentName: student.Name.split(' ')[0],\n    studentId:   student.StudentID,\n    grade:       student.Grade || '',\n    subject:     webhook.subject || 'General',\n    query:       `Generate quiz questions about ${webhook.subject || 'General'} for Grade ${student.Grade || 'school'} student`,\n    mode:        'quiz'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "a4deb9b0-479a-4877-aa46-1cd18cdec608",
+      "name": "Prepare Quiz RAG"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/rag-query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"{{ $json.query }}\",\n  \"mode\": \"quiz\",\n  \"grade\": \"{{ $json.grade }}\",\n  \"subject\": \"{{ $json.subject }}\",\n  \"studentName\": \"{{ $json.studentName }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "28d05dc0-5e05-4ae9-a634-9926e45fd615",
+      "name": "Call RAG Query"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ragResponse = $input.all()[0].json;\nconst quizData    = $('Prepare Quiz RAG').item.json;\n\n// RAG returns the quiz as a string inside reply field\nconst rawQuizText = ragResponse.reply || ragResponse.response || '';\n\nreturn [{\n  json: {\n    response:    rawQuizText,\n    quizId:      quizData.quizId,\n    studentName: quizData.studentName,\n    studentId:   quizData.studentId,\n    subject:     quizData.subject,\n    grade:       quizData.grade\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "ea6ecead-8a97-4981-b70a-41df8e2f9858",
+      "name": "Prepare for Parse Quiz"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2007084623,
+          "mode": "list",
+          "cachedResultName": "Students",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=2007084623"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Name",
+              "lookupValue": "={{ $json.body.studentName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "8836cfe6-9895-44b6-b29b-6af03dcdf127",
+      "name": "Verify Student",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify Student",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Quiz": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Build Quiz Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Quiz Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Quiz RAG": {
+      "main": [
+        [
+          {
+            "node": "Call RAG Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call RAG Query": {
+      "main": [
+        [
+          {
+            "node": "Prepare for Parse Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare for Parse Quiz": {
+      "main": [
+        [
+          {
+            "node": "Parse Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Student": {
+      "main": [
+        [
+          {
+            "node": "Prepare Quiz RAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c9b68388-eed4-4b0c-9313-f2ea334f0393",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0e47e07f04b250b52593bc1d3e1475b3a0a32ea22ce192b79f3b86bd1a696638"
+  },
+  "nodeGroups": [],
+  "id": "TlAv9zd0ojgLfGXF",
+  "tags": []
+}

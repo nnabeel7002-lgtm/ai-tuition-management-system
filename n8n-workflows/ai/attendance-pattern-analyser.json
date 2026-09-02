@@ -1,0 +1,379 @@
+{
+  "name": "Attendance Pattern Analyser",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 20
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5d9ee46f-8c12-4c1f-a704-bae71402b17c",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Attendance",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "253366f2-aafe-46af-930b-e28f311d64e2",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nif (!items.length || !items[0].json.StudentName) {\n  return [{ json: { hasData: false } }];\n}\n\n// Group by student\nconst students = {};\nitems.forEach(item => {\n  const name = item.json.StudentName;\n  const date = item.json.Date;\n  const status = (item.json.Status || '').toLowerCase();\n  if (!name || !date) return;\n\n  if (!students[name]) {\n    students[name] = { records: [], byDay: {}, byWeek: {} };\n  }\n\n  const d = new Date(date);\n  const dayName = ['Sunday','Monday','Tuesday','Wednesday',\n                   'Thursday','Friday','Saturday'][d.getDay()];\n  const weekNum  = Math.floor(d.getDate() / 7);\n\n  students[name].records.push({ date, status, dayName, weekNum });\n\n  if (!students[name].byDay[dayName]) {\n    students[name].byDay[dayName] = { total: 0, absent: 0, late: 0 };\n  }\n  students[name].byDay[dayName].total++;\n  if (status === 'absent') students[name].byDay[dayName].absent++;\n  if (status === 'late')   students[name].byDay[dayName].late++;\n});\n\nconst results = [];\n\nObject.entries(students).forEach(([name, data]) => {\n  const records = data.records;\n  const total   = records.length;\n  if (total < 3) return;\n\n  const absent  = records.filter(r => r.status === 'absent').length;\n  const late    = records.filter(r => r.status === 'late').length;\n  const present = records.filter(r => r.status === 'present').length;\n  const pct     = Math.round(((present + late * 0.5) / total) * 100);\n\n  // Detect day-specific pattern\n  const suspiciousDays = [];\n  Object.entries(data.byDay).forEach(([day, stats]) => {\n    if (stats.total >= 2) {\n      const absentRate = Math.round((stats.absent / stats.total) * 100);\n      if (absentRate >= 50) {\n        suspiciousDays.push(`${day} (absent ${stats.absent}/${stats.total} times)`);\n      }\n    }\n  });\n\n  // Detect consecutive absences\n  let maxStreak = 0;\n  let currentStreak = 0;\n  records.forEach(r => {\n    if (r.status === 'absent') {\n      currentStreak++;\n      maxStreak = Math.max(maxStreak, currentStreak);\n    } else {\n      currentStreak = 0;\n    }\n  });\n\n  // Detect recent decline\n  const recentRecords = records.slice(-5);\n  const recentAbsent  = recentRecords.filter(r => r.status === 'absent').length;\n  const decliningTrend = recentAbsent >= 3;\n\n  // Detect late pattern\n  const lateRate = Math.round((late / total) * 100);\n  const frequentlyLate = lateRate >= 40;\n\n  const patterns = [];\n  if (suspiciousDays.length)   patterns.push(`Always absent on: ${suspiciousDays.join(', ')}`);\n  if (maxStreak >= 3)          patterns.push(`Consecutive absences: ${maxStreak} days in a row`);\n  if (decliningTrend)          patterns.push(`Declining trend: ${recentAbsent} absences in last 5 sessions`);\n  if (frequentlyLate)          patterns.push(`Frequently late: ${lateRate}% of sessions`);\n\n  const hasPatterns = patterns.length > 0 || pct < 75;\n\n  results.push({\n    hasData:       true,\n    hasPatterns:   hasPatterns,\n    studentName:   name,\n    total:         total,\n    present:       present,\n    absent:        absent,\n    late:          late,\n    percentage:    pct,\n    maxStreak:     maxStreak,\n    decliningTrend: decliningTrend,\n    frequentlyLate: frequentlyLate,\n    suspiciousDays: suspiciousDays.join(', ') || 'None',\n    patterns:      patterns.join(' | ') || 'No specific patterns detected',\n    recentPattern: recentRecords.map(r => r.status).join(' → '),\n    dayBreakdown:  JSON.stringify(data.byDay)\n  });\n});\n\nif (!results.length) {\n  return [{ json: { hasData: false, message: 'Not enough data to analyse patterns yet.' } }];\n}\n\nreturn results.map(r => ({ json: r }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "4e7bb32b-75d2-479c-b49d-09c06b3e7a3d",
+      "name": "Analyse Patterns"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "589327bc-6e15-4596-83b2-32e66d4a7bf6",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f1a50651-7200-4ad4-8ad3-dfe2894f45e7",
+              "leftValue": "={{ $json.hasPatterns }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        832,
+        48
+      ],
+      "id": "4e05bcb3-5d68-4899-a340-01cd462c6589",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const student = $('Loop Over Items').item.json;\nconst dayBreakdown = JSON.parse(student.dayBreakdown);\n\nconst dayLines = Object.entries(dayBreakdown).map(([day, stats]) =>\n  `  ${day}: ${stats.absent} absent, ${stats.late} late out of ${stats.total} sessions`\n).join('\\n');\n\nconst prompt = `You are an educational analyst. Based on attendance data, write ONE specific insight about this student's attendance pattern. Be direct and actionable for the tutor.\n\nStudent: ${student.studentName}\nOverall attendance: ${student.percentage}%\nTotal sessions: ${student.total} (${student.present} present, ${student.absent} absent, ${student.late} late)\nLongest absence streak: ${student.maxStreak} days\nRecent pattern (last 5): ${student.recentPattern}\nDetected patterns: ${student.patterns}\n\nAttendance by day:\n${dayLines}\n\nWrite exactly 2 sentences: first sentence describes the pattern, second sentence gives the tutor one specific action to take. No greetings, no sign-offs.`;\n\nreturn [{\n  json: {\n    studentName:    student.studentName,\n    percentage:     student.percentage,\n    patterns:       student.patterns,\n    suspiciousDays: student.suspiciousDays,\n    maxStreak:      student.maxStreak,\n    decliningTrend: student.decliningTrend,\n    frequentlyLate: student.frequentlyLate,\n    present:        student.present,\n    absent:         student.absent,\n    late:           student.late,\n    total:          student.total,\n    recentPattern:  student.recentPattern,\n    ollamaBody: JSON.stringify({\n      model:  'llama3.2:1b',\n      prompt: prompt,\n      stream: false\n    })\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        -16
+      ],
+      "id": "f3bfb180-eaca-41e0-9ceb-81f5b73228e1",
+      "name": "Build Pattern Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/generate",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.ollamaBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1216,
+        -16
+      ],
+      "id": "e3a1bd3b-db98-4b55-a126-cfa90c8ebfdd",
+      "name": "OLLAMA REQUEST"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ollamaData  = $input.all()[0].json;\nconst studentData = $('Build Pattern Prompt').item.json;\nconst aiInsight   = (ollamaData.response || 'Analysis unavailable.').trim();\n\nconst statusEmoji = studentData.percentage >= 75 ? '🟡' :\n                    studentData.percentage >= 60 ? '🟠' : '🔴';\n\nconst flags = [];\nif (studentData.suspiciousDays !== 'None') flags.push(`📅 Day pattern: ${studentData.suspiciousDays}`);\nif (studentData.maxStreak >= 3)            flags.push(`⛓️ Streak: ${studentData.maxStreak} consecutive absences`);\nif (studentData.decliningTrend)            flags.push(`📉 Declining trend in recent sessions`);\nif (studentData.frequentlyLate)            flags.push(`⏰ Frequently arriving late`);\n\nconst message = [\n  `${statusEmoji} Attendance Pattern — ${studentData.studentName}`,\n  `📊 ${studentData.percentage}% overall (${studentData.present} present | ${studentData.absent} absent | ${studentData.late} late / ${studentData.total} total)`,\n  `🔄 Recent: ${studentData.recentPattern}`,\n  flags.length ? `\\n⚠️ Patterns detected:\\n${flags.map(f => `  ${f}`).join('\\n')}` : '',\n  `\\n🤖 ${aiInsight}`,\n  '─────────────────────'\n].filter(Boolean).join('\\n');\n\nreturn [{ json: { message, studentName: studentData.studentName } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        -16
+      ],
+      "id": "30fc4534-dad6-44e3-9498-5bedbf3b4f8b",
+      "name": "Build Pattern Alert"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/channels/1533040460518527017/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"content\": {{ JSON.stringify($json.message) }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1584,
+        -16
+      ],
+      "id": "5d927ea8-4818-4f35-ad07-9a7390fe5c40",
+      "name": "POST TO TUTOR COMMAND1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/v10/channels/1533040460518527017/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bot YOUR_DISCORD_BOT_TOKEN_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"content\": {{ JSON.stringify('📋 Attendance Pattern Analysis complete for week of ' + new Date().toLocaleDateString('en-GB') + '. Students with no concerning patterns were skipped.') }}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        928,
+        -208
+      ],
+      "id": "520bc678-6c6d-4e53-945f-ab70118bd53b",
+      "name": "POST TO TUTOR COMMAND"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        -176
+      ],
+      "id": "3fbf7938-edf9-42ae-abde-9efd25382a08",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Analyse Patterns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyse Patterns": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "POST TO TUTOR COMMAND",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Build Pattern Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Pattern Prompt": {
+      "main": [
+        [
+          {
+            "node": "OLLAMA REQUEST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OLLAMA REQUEST": {
+      "main": [
+        [
+          {
+            "node": "Build Pattern Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Pattern Alert": {
+      "main": [
+        [
+          {
+            "node": "POST TO TUTOR COMMAND1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST TO TUTOR COMMAND1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "737f9263-0b00-4f16-85a9-c187d3f9e1f2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0e47e07f04b250b52593bc1d3e1475b3a0a32ea22ce192b79f3b86bd1a696638"
+  },
+  "nodeGroups": [],
+  "id": "TKVaiyS4Xn7zdmwD",
+  "tags": []
+}

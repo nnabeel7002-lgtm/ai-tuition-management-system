@@ -1,0 +1,499 @@
+{
+  "name": "Parent Portal",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "parent-query",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b996e23c-679a-4ca0-a21c-18e4b228bdd9",
+      "name": "Webhook",
+      "webhookId": "d9e62a2f-ded2-4b64-9785-a56e4f2b42ff"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/generate",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.ollamaBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        656,
+        96
+      ],
+      "id": "8135a25b-6fd7-450c-970b-56f56aa922ca",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all()[0].json;\n\n// If Urdu shortcut was taken\nif (input.skipOllama) {\n  if (input.studentName === 'unknown') {\n    return [{ json: {\n      studentName:     'unknown',\n      queryType:       'unknown',\n      originalMessage: input.originalMessage,\n      error:           true,\n      reply:           'براہ کرم طالب علم کا نام بتائیں۔ مثال: علی کی حاضری کیا ہے؟'\n    }}];\n  }\n  return [{ json: {\n    studentName:     input.studentName,\n    queryType:       input.queryType,\n    originalMessage: input.originalMessage,\n    error:           false\n  }}];\n}\n\n// English path — parse Ollama response\nconst raw = input.response || '';\n// ... rest of existing parse code"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -16
+      ],
+      "id": "0688e138-85fb-44b5-a5d9-47d21b102658",
+      "name": "Parse Parent Query"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input       = $input.all()[0].json.body;\nconst question    = input.content;\nconst studentName = input.authorName || 'Parent';\nconst isUrdu      = /[\\u0600-\\u06FF]/.test(question);\n\n// Urdu keyword fallback — don't rely on Ollama for Urdu\nif (isUrdu) {\n  const urduToEnglish = {\n    'علی':'Ali','زید':'Zaid','سارہ':'Sara','احمد':'Ahmed',\n    'عمر':'Omar','فاطمہ':'Fatima','حسن':'Hassan','بلال':'Bilal',\n    'حمزہ':'Hamza','انس':'Anas','زینب':'Zainab','نور':'Noor'\n  };\n\n  let extractedName = 'unknown';\n  const nameMatch = question.match(/([ا-ی]{2,})\\s+(کی|کا|کو|نے)/);\n  if (nameMatch) {\n    const urduName = nameMatch[1];\n    extractedName = urduToEnglish[urduName] || urduName;\n  }\n\n  let queryType = 'general';\n  if (/حاضری|حاضر/.test(question))         queryType = 'attendance';\n  if (/فیس|ادائیگی|رقم/.test(question))     queryType = 'fees';\n  if (/ہوم ورک|ہوم‌ورک/.test(question))    queryType = 'homework';\n\n  return [{\n    json: {\n      originalMessage: question,\n      skipOllama:      true,\n      studentName:     extractedName,\n      queryType:       queryType\n    }\n  }];\n}\n\n// English — use Ollama\nconst prompt = `A parent sent this message. Extract student name and query type. Return ONLY JSON.\n\nMessage: \"${question}\"\n\nReturn:\n{\"studentName\":\"first name only\",\"queryType\":\"general or fees or attendance or homework\"}\n\nIf no student name found use \"unknown\". JSON only:`;\n\nreturn [{\n  json: {\n    originalMessage: question,\n    skipOllama:      false,\n    ollamaBody: JSON.stringify({\n      model:  'llama3.2:1b',\n      prompt: prompt,\n      stream: false\n    })\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "de25baa7-bb13-4267-be5f-df98c53c3349",
+      "name": "Build Ollama Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "19f3a0d1-d179-49f0-accf-c883d48a1714",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "7c5ad1c9-abe1-4422-9808-a203a76f18ea",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"reply\": \"{{ $json.reply }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1328,
+        96
+      ],
+      "id": "31c29fc2-14e9-4f41-9eb4-1f87a25d4bbf",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 805082606,
+          "mode": "list",
+          "cachedResultName": "Fees",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=805082606"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "StudentName",
+              "lookupValue": "={{ $('Parse Parent Query').first().json.studentName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1552,
+        -96
+      ],
+      "id": "26743bdf-258e-450f-a138-d864c43987fa",
+      "name": "Get Fee Data",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2007084623,
+          "mode": "list",
+          "cachedResultName": "Students",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=2007084623"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Name",
+              "lookupValue": "={{ $json.studentName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1328,
+        -96
+      ],
+      "id": "fe5add71-28ce-44b5-96b9-7210d87ff576",
+      "name": "Get Student Data",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Attendance",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "StudentName",
+              "lookupValue": "={{ $('Parse Parent Query').first().json.studentName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1776,
+        -96
+      ],
+      "id": "b0ed9d92-5a1d-4494-bdb0-4f9f36b3a93d",
+      "name": "Get Attendance Data",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y",
+          "mode": "list",
+          "cachedResultName": "Tuition Management System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1764605639,
+          "mode": "list",
+          "cachedResultName": "Homework",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gg3tyQkYAyX12hB25XA1Dyr6zoqiUHLEojhM2MpZw3Y/edit#gid=1764605639"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "StudentName",
+              "lookupValue": "={{ $('Parse Parent Query').first().json.studentName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2000,
+        -96
+      ],
+      "id": "d8b56a21-c7b0-4fcb-bb01-eecfafc2060b",
+      "name": "Get Homework Data",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "f4l2AlrJMhuUDdJV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const query      = $('Parse Parent Query').first().json;\nconst studentName = query.studentName;\nconst queryType   = query.queryType;\n\nconst studentRows    = $('Get Student Data').all();\nconst feeRows        = $('Get Fee Data').all();\nconst attendanceRows = $('Get Attendance Data').all();\nconst homeworkRows   = $input.all();\n\n// Student not found\nif (!studentRows.length || !studentRows[0].json.StudentID) {\n  return [{ json: { \n    reply: `I couldn't find a student named ${studentName} in the system. Please check the name and try again.`\n  }}];\n}\n\nconst student = studentRows[0].json;\n\n// Calculate attendance\nlet attendanceInfo = 'No attendance records yet.';\nif (attendanceRows.length && attendanceRows[0].json.StudentName) {\n  const total   = attendanceRows.length;\n  const present = attendanceRows.filter(r => (r.json.Status || '').toLowerCase() === 'present').length;\n  const absent  = attendanceRows.filter(r => (r.json.Status || '').toLowerCase() === 'absent').length;\n  const late    = attendanceRows.filter(r => (r.json.Status || '').toLowerCase() === 'late').length;\n  const pct     = Math.round(((present + late * 0.5) / total) * 100);\n  const emoji   = pct >= 75 ? '✅' : pct >= 60 ? '⚠️' : '🔴';\n  attendanceInfo = `${emoji} ${pct}% (${present} present, ${absent} absent, ${late} late out of ${total} days)`;\n}\n\n// Fee info\nlet feeInfo = 'No fee records found.';\nif (feeRows.length && feeRows[0].json.StudentName) {\n  const latestFee = feeRows[feeRows.length - 1].json;\n  const paid      = latestFee.Status === 'Paid';\n  const partial   = latestFee.Status === 'Partial';\n  const emoji     = paid ? '✅' : partial ? '⚠️' : '🔴';\n  feeInfo = paid\n    ? `${emoji} Paid — PKR ${latestFee.AmountDue} for ${latestFee.Month}`\n    : partial\n    ? `${emoji} Partial — PKR ${latestFee.AmountPaid} paid of PKR ${latestFee.AmountDue} for ${latestFee.Month}. Remaining: PKR ${parseFloat(latestFee.AmountDue) - parseFloat(latestFee.AmountPaid)}`\n    : `${emoji} Pending — PKR ${latestFee.AmountDue} for ${latestFee.Month}. Due: ${latestFee.DueDate}`;\n}\n\n// Homework info\nlet homeworkInfo = 'No homework assigned.';\nif (homeworkRows.length && homeworkRows[0].json.StudentName) {\n  const pending = homeworkRows.filter(r => (r.json.Status || '').toLowerCase() !== 'submitted');\n  const done    = homeworkRows.filter(r => (r.json.Status || '').toLowerCase() === 'submitted');\n  if (pending.length) {\n    const list = pending.map(r => `   • ${r.json.Subject}: ${r.json.Description} (Due: ${(r.json.DueDate || '').split('T')[0]})`).join('\\n');\n    homeworkInfo = `${pending.length} pending:\\n${list}`;\n    if (done.length) homeworkInfo += `\\n   ✅ ${done.length} submitted`;\n  } else {\n    homeworkInfo = `✅ All ${done.length} assignment(s) submitted`;\n  }\n}\n\n// Build response based on queryType\nlet reply = '';\n\nif (queryType === 'fees') {\n  reply = `Fee status for ${student.Name}:\\n\\n💰 ${feeInfo}`;\n\n} else if (queryType === 'attendance') {\n  reply = `Attendance for ${student.Name}:\\n\\n📊 ${attendanceInfo}`;\n\n} else if (queryType === 'homework') {\n  reply = `Homework for ${student.Name}:\\n\\n📚 ${homeworkInfo}`;\n\n} else {\n  reply = `Summary for ${student.Name} (Grade ${student.Grade}):\\n\\n📊 Attendance: ${attendanceInfo}\\n\\n💰 Fees: ${feeInfo}\\n\\n📚 Homework: ${homeworkInfo}`;\n}\n\nreturn [{ json: { reply } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        -96
+      ],
+      "id": "87ab0f4c-38c3-4d40-8256-25cbc5d1e032",
+      "name": "Compile Response",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.reply }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2448,
+        -96
+      ],
+      "id": "e5f1f07c-3acc-43cd-9f56-59ffd851a376",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6d4b3e67-4f3e-431b-b08f-b5ecf4e8cbe1",
+              "leftValue": "={{ $json.skipOllama }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        0
+      ],
+      "id": "23104bc0-e692-44c5-be4e-a925b16fd098",
+      "name": "If1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Ollama Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Parse Parent Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Ollama Request": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Parent Query": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get Student Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Student Data": {
+      "main": [
+        [
+          {
+            "node": "Get Fee Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Fee Data": {
+      "main": [
+        [
+          {
+            "node": "Get Attendance Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Attendance Data": {
+      "main": [
+        [
+          {
+            "node": "Get Homework Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Homework Data": {
+      "main": [
+        [
+          {
+            "node": "Compile Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Parse Parent Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "6971378d-43e4-471b-a14d-18e16936da0c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0e47e07f04b250b52593bc1d3e1475b3a0a32ea22ce192b79f3b86bd1a696638"
+  },
+  "nodeGroups": [],
+  "id": "YrymwzjXm5GP4AQX",
+  "tags": []
+}
