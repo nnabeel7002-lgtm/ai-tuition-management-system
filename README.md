@@ -265,6 +265,17 @@ WHISPER_CACHE_DIR=    # Directory to store Whisper model files
 ```
 
 ---
+## n8n Workflow Credentials
+
+The workflow JSON files in `n8n-workflows/` have all API keys and tokens 
+replaced with placeholder values. After importing workflows into n8n, 
+you must re-enter your credentials in:
+
+- Settings → Credentials → add your Google Sheets OAuth2 credentials
+- Any HTTP Request node that calls Discord API: replace 
+  `YOUR_DISCORD_BOT_TOKEN_HERE` with your actual bot token
+- Any HTTP Request node that calls Groq: replace 
+  `YOUR_GROQ_KEY_HERE` with your actual Groq key
 
 ## n8n Workflows
 
@@ -311,6 +322,6 @@ This project demonstrates production-level integration of:
 
 <div align="center">
 
-Made with ❤️ for home tutors everywhere
+Made for home tutors everywhere
 
 </div>
