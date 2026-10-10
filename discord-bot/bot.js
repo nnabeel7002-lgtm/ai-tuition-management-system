@@ -5,6 +5,7 @@ const TOKEN         = process.env.DISCORD_TOKEN;
 const SUPABASE_URL  = process.env.SUPABASE_URL;
 const SUPABASE_KEY  = process.env.SUPABASE_KEY;
 const N8N_BASE_URL  = process.env.N8N_BASE_URL || 'http://localhost:5678';
+const OLLAMA_URL    = process.env.OLLAMA_URL    || 'http://localhost:11434';
 const activeQuizzes = {};
 const { execFile } = require('child_process');
 const fs           = require('fs');
@@ -84,9 +85,13 @@ function callGroq(userMessage) {
       stream: false
     });
 
+    const ollamaBase = new URL(OLLAMA_URL);
+    const isHttps    = ollamaBase.protocol === 'https:';
+    const httpLib    = require(isHttps ? 'https' : 'http');
+    
     const options = {
-      hostname: 'localhost',
-      port:     11434,
+      hostname: ollamaBase.hostname,
+      port:     ollamaBase.port || (isHttps ? 443 : 80),
       path:     '/api/generate',
       method:   'POST',
       headers: {
@@ -95,7 +100,7 @@ function callGroq(userMessage) {
       }
     };
 
-    const req = require('http').request(options, (res) => {
+const req = httpLib.request(options, (res) => {
       let data = '';
       res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
