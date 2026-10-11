@@ -1,5 +1,7 @@
 const { Client, GatewayIntentBits, ChannelType } = require('discord.js');
-require('dotenv').config();
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 
 const TOKEN         = process.env.DISCORD_TOKEN;
 const SUPABASE_URL  = process.env.SUPABASE_URL;
